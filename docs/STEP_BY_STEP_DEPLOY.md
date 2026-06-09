@@ -59,6 +59,7 @@ docker --version
 ```bash
 brew install jq       # macOS
 # apt-get install jq  # Ubuntu/Debian
+winget install jqlang.jq #window
 ```
 
 ### 1.4 GitHub CLI (for setting secrets later)
@@ -66,6 +67,8 @@ brew install jq       # macOS
 ```bash
 brew install gh
 gh auth login
+winget install --id GitHub.cli #window
+gh --version
 ```
 
 ---
@@ -139,12 +142,39 @@ aws ec2 describe-vpcs \
   --output text \
   --region us-east-1
 
+# For windows powershell
+aws ec2 describe-vpcs `
+  --query "Vpcs[0].VpcId" `
+  --output text `
+  --region us-east-1
+
+# For CMD
+aws ec2 describe-vpcs ^
+  --query "Vpcs[0].VpcId" ^
+  --output text ^
+  --region us-east-1
+
 # List all default subnets (pick 2 from different AZs)
 aws ec2 describe-subnets \
   --filters "Name=defaultForAz,Values=true" \
   --query 'Subnets[*].{SubnetId:SubnetId,AZ:AvailabilityZone}' \
   --output table \
   --region us-east-1
+
+# Powershell
+aws ec2 describe-subnets `
+  --filters "Name=defaultForAz,Values=true" `
+  --query "Subnets[*].{SubnetId:SubnetId,AZ:AvailabilityZone}" `
+  --output table `
+  --region us-east-1
+
+#CMD
+aws ec2 describe-subnets ^
+  --filters "Name=defaultForAz,Values=true" ^
+  --query "Subnets[*].{SubnetId:SubnetId,AZ:AvailabilityZone}" ^
+  --output table ^
+  --region us-east-1
+
 ```
 
 ### 3.2 Export all variables
@@ -189,10 +219,41 @@ ALB_SG=$(aws ec2 create-security-group \
   --query 'GroupId' --output text)
 echo "ALB SG: $ALB_SG"
 
+#Powershell command
+aws ec2 create-security-group `
+  --group-name doc-parser-alb-sg `
+  --description "ALB for doc-parser" `
+  --vpc-id $VPC_ID `
+  --query "GroupId" `
+  --output text
+
+#CMD Command
+aws ec2 create-security-group ^
+  --group-name doc-parser-alb-sg ^
+  --description "ALB for doc-parser" ^
+  --vpc-id %VPC_ID% ^
+  --query "GroupId" ^
+  --output text
+
+
 # Allow HTTP from internet
 aws ec2 authorize-security-group-ingress \
   --group-id $ALB_SG \
   --protocol tcp --port 80 --cidr 0.0.0.0/0
+
+#Powershell command
+aws ec2 authorize-security-group-ingress `
+  --group-id $ALB_SG `
+  --protocol tcp `
+  --port 80 `
+  --cidr 0.0.0.0/0
+
+#CMD Command
+aws ec2 authorize-security-group-ingress ^
+  --group-id %ALB_SG% ^
+  --protocol tcp ^
+  --port 80 ^
+  --cidr 0.0.0.0/0
 
 # --- ECS Security Group ---
 ECS_SG=$(aws ec2 create-security-group \
@@ -202,15 +263,60 @@ ECS_SG=$(aws ec2 create-security-group \
   --query 'GroupId' --output text)
 echo "ECS SG: $ECS_SG"
 
+#Powershell command
+aws ec2 create-security-group `
+  --group-name doc-parser-ecs-sg `
+  --description "ECS tasks for doc-parser" `
+  --vpc-id $VPC_ID `
+  --query "GroupId" `
+  --output text
+
+#CMD Version
+aws ec2 create-security-group ^
+  --group-name doc-parser-ecs-sg ^
+  --description "ECS tasks for doc-parser" ^
+  --vpc-id %VPC_ID% ^
+  --query "GroupId" ^
+  --output text
+
 # Allow ALB → ECS on FastAPI port
 aws ec2 authorize-security-group-ingress \
   --group-id $ECS_SG \
   --protocol tcp --port 8000 --source-group $ALB_SG
 
+#Powershell version
+aws ec2 authorize-security-group-ingress `
+  --group-id $ECS_SG `
+  --protocol tcp `
+  --port 8000 `
+  --source-group $ALB_SG
+
+#CMD Version
+aws ec2 authorize-security-group-ingress ^
+  --group-id %ECS_SG% ^
+  --protocol tcp ^
+  --port 8000 ^
+  --source-group %ALB_SG%
+
 # Allow EFS mount traffic within ECS tasks
 aws ec2 authorize-security-group-ingress \
   --group-id $ECS_SG \
   --protocol tcp --port 2049 --source-group $ECS_SG
+
+#PowerShell version
+aws ec2 authorize-security-group-ingress `
+  --group-id $ECS_SG `
+  --protocol tcp `
+  --port 2049 `
+  --source-group $ECS_SG
+
+#CMD Version
+aws ec2 authorize-security-group-ingress ^
+  --group-id %ECS_SG% ^
+  --protocol tcp ^
+  --port 2049 ^
+  --source-group %ECS_SG%
+
 ```
 
 ```bash
@@ -236,6 +342,18 @@ aws ecr create-repository \
   --repository-name doc-parser/app \
   --region $AWS_REGION \
   --image-scanning-configuration scanOnPush=true
+
+#Powershell Version
+aws ecr create-repository `
+  --repository-name doc-parser/app `
+  --region $AWS_REGION `
+  --image-scanning-configuration scanOnPush=true
+
+#CMD Version
+aws ecr create-repository ^
+  --repository-name doc-parser/app ^
+  --region %AWS_REGION% ^
+  --image-scanning-configuration scanOnPush=true
 ```
 
 Verify:
@@ -245,6 +363,18 @@ aws ecr describe-repositories \
   --query 'repositories[*].repositoryName' \
   --output table \
   --region $AWS_REGION
+
+#Powershell Version
+aws ecr describe-repositories `
+  --query "repositories[*].repositoryName" `
+  --output table `
+  --region $AWS_REGION
+
+#CMD Version
+aws ecr describe-repositories ^
+  --query "repositories[*].repositoryName" ^
+  --output table ^
+  --region %AWS_REGION%
 ```
 
 ---
