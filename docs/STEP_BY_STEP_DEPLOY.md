@@ -1159,12 +1159,41 @@ LISTENER_ARN=$(aws elbv2 create-listener \
   --query 'Listeners[0].ListenerArn' --output text)
 echo "Listener: $LISTENER_ARN"
 
+$LISTENER_ARN = aws elbv2 create-listener `
+  --load-balancer-arn $ALB_ARN `
+  --protocol HTTP `
+  --port 80 `
+  --default-actions Type=forward,TargetGroupArn=$APP_TG_ARN `
+  --query "Listeners[0].ListenerArn" `
+  --output text
+
+aws elbv2 create-listener ^
+  --load-balancer-arn <ALB_ARN> ^
+  --protocol HTTP ^
+  --port 80 ^
+  --default-actions Type=forward,TargetGroupArn=<APP_TG_ARN> ^
+  --query "Listeners[0].ListenerArn" ^
+  --output text
+
 # Increase idle timeout to 300s — default 60s causes 504 on /ingest/file
 # (PDF parsing + captioning + embedding takes 1-3 minutes)
 aws elbv2 modify-load-balancer-attributes \
   --load-balancer-arn $ALB_ARN \
   --attributes Key=idle_timeout.timeout_seconds,Value=300 \
   --region $AWS_REGION
+
+#Powershell Version
+aws elbv2 modify-load-balancer-attributes `
+  --load-balancer-arn $ALB_ARN `
+  --attributes Key=idle_timeout.timeout_seconds,Value=300 `
+  --region $AWS_REGION
+
+#CMD Version
+aws elbv2 modify-load-balancer-attributes ^
+  --load-balancer-arn %ALB_ARN% ^
+  --attributes Key=idle_timeout.timeout_seconds,Value=300 ^
+  --region %AWS_REGION%
+
 
 # Print the public URL
 ALB_DNS=$(aws elbv2 describe-load-balancers \
@@ -1196,6 +1225,30 @@ aws ecs create-service \
   }" \
   --load-balancers "targetGroupArn=$APP_TG_ARN,containerName=app,containerPort=8000" \
   --region $AWS_REGION
+
+#Powershell Version
+aws ecs create-service `
+  --cluster doc-parser-cluster `
+  --service-name doc-parser-app `
+  --task-definition doc-parser-app `
+  --desired-count 1 `
+  --launch-type FARGATE `
+  --enable-execute-command `
+  --network-configuration "awsvpcConfiguration={subnets=[subnet-029c1bef939dae7c8,subnet-0c0f44b0ec0c2803a],securityGroups=[sg-0abab7966b65166f1],assignPublicIp=ENABLED}" `
+  --load-balancers "targetGroupArn=$APP_TG_ARN,containerName=app,containerPort=8000" `
+  --region us-east-1
+
+#CMD Version
+aws ecs create-service ^
+  --cluster doc-parser-cluster ^
+  --service-name doc-parser-app ^
+  --task-definition doc-parser-app ^
+  --desired-count 1 ^
+  --launch-type FARGATE ^
+  --enable-execute-command ^
+  --network-configuration "awsvpcConfiguration={subnets=[subnet-029c1bef939dae7c8,subnet-0c0f44b0ec0c2803a],securityGroups=[sg-0abab7966b65166f1],assignPublicIp=ENABLED}" ^
+  --load-balancers "targetGroupArn=arn:aws:elasticloadbalancing:us-east-1:380610849617:targetgroup/doc-parser-app-tg/039b24e549e09f54,containerName=app,containerPort=8000" ^
+  --region us-east-1
 ```
 
 Wait for the service to reach a stable state:
@@ -1205,6 +1258,20 @@ aws ecs wait services-stable \
   --cluster $CLUSTER_NAME \
   --services doc-parser-app
 echo "Service is stable."
+
+#Powershell Version
+aws ecs wait services-stable `
+  --cluster doc-parser-cluster `
+  --services doc-parser-app
+
+Write-Host "Service is stable."
+
+#CMD Version
+aws ecs wait services-stable ^
+  --cluster doc-parser-cluster ^
+  --services doc-parser-app
+
+echo Service is stable.
 ```
 
 ---
