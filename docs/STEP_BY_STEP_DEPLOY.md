@@ -385,11 +385,22 @@ aws ecr describe-repositories ^
 
 aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com
 
-
 aws ecs create-cluster \
   --cluster-name $CLUSTER_NAME \
   --capacity-providers FARGATE FARGATE_SPOT \
   --region $AWS_REGION
+
+#Powershell Version
+aws ecs create-cluster `
+  --cluster-name $CLUSTER_NAME `
+  --capacity-providers FARGATE FARGATE_SPOT `
+  --region $AWS_REGION
+
+#CMD Version
+aws ecs create-cluster ^
+  --cluster-name %CLUSTER_NAME% ^
+  --capacity-providers FARGATE FARGATE_SPOT ^
+  --region %AWS_REGION%
 ```
 
 Verify:
@@ -399,6 +410,19 @@ aws ecs describe-clusters \
   --clusters $CLUSTER_NAME \
   --query 'clusters[0].{name:clusterName,status:status}' \
   --output table
+
+#Powershell version
+aws ecs describe-clusters `
+  --clusters $CLUSTER_NAME `
+  --query "clusters[0].{name:clusterName,status:status}" `
+  --output table
+
+#CMD Version
+aws ecs describe-clusters ^
+  --clusters %CLUSTER_NAME% ^
+  --query "clusters[0].{name:clusterName,status:status}" ^
+  --output table
+
 ```
 
 ---
@@ -418,10 +442,39 @@ FS_ID=$(aws efs create-file-system \
   --query 'FileSystemId' --output text)
 echo "EFS ID: $FS_ID"
 
+#Powershell Version
+aws efs create-file-system `
+  --performance-mode generalPurpose `
+  --throughput-mode bursting `
+  --region $AWS_REGION `
+  --query "FileSystemId" `
+  --output text
+
+#CMD Version
+aws efs create-file-system ^
+  --performance-mode generalPurpose ^
+  --throughput-mode bursting ^
+  --region %AWS_REGION% ^
+  --query "FileSystemId" ^
+  --output text
+
 # Wait until available (check lifecycle state)
 aws efs describe-file-systems \
   --file-system-id $FS_ID \
   --query 'FileSystems[0].LifeCycleState' \
+  --output text
+
+#Powershell Version
+aws efs describe-file-systems `
+  --file-system-id $FS_ID `
+  --query "FileSystems[0].LifeCycleState" `
+  --output text
+  
+
+#CMD Version
+aws efs describe-file-systems ^
+  --file-system-id %FS_ID% ^
+  --query "FileSystems[0].LifeCycleState" ^
   --output text
 # Wait until output is: available
 
@@ -439,6 +492,29 @@ aws efs create-mount-target \
   --subnet-id $SUBNET2 \
   --security-groups $ECS_SG
 
+#Powershell Version
+aws efs create-mount-target `
+  --file-system-id $FS_ID `
+  --subnet-id $SUBNET1 `
+  --security-groups $ECS_SG
+
+aws efs create-mount-target `
+  --file-system-id $FS_ID `
+  --subnet-id $SUBNET2 `
+  --security-groups $ECS_SG
+
+#CMD Version
+aws efs create-mount-target ^
+  --file-system-id %FS_ID% ^
+  --subnet-id %SUBNET1% ^
+  --security-groups %ECS_SG%
+
+aws efs create-mount-target ^
+  --file-system-id %FS_ID% ^
+  --subnet-id %SUBNET2% ^
+  --security-groups %ECS_SG%
+  
+
 # Access point for Qdrant data
 QDRANT_AP=$(aws efs create-access-point \
   --file-system-id $FS_ID \
@@ -447,6 +523,22 @@ QDRANT_AP=$(aws efs create-access-point \
   --query 'AccessPointId' --output text)
 echo "Qdrant Access Point: $QDRANT_AP"
 
+#Powershell Version
+aws efs create-access-point `
+  --file-system-id $FS_ID `
+  --posix-user Uid=1000,Gid=1000 `
+  --root-directory "Path=/qdrant,CreationInfo={OwnerUid=1000,OwnerGid=1000,Permissions=755}" `
+  --query "AccessPointId" `
+  --output text
+
+#CMD Version
+aws efs create-access-point ^
+  --file-system-id %FS_ID% ^
+  --posix-user Uid=1000,Gid=1000 ^
+  --root-directory "Path=/qdrant,CreationInfo={OwnerUid=1000,OwnerGid=1000,Permissions=755}" ^
+  --query "AccessPointId" ^
+  --output text
+
 # Access point for Ollama model weights
 OLLAMA_AP=$(aws efs create-access-point \
   --file-system-id $FS_ID \
@@ -454,7 +546,24 @@ OLLAMA_AP=$(aws efs create-access-point \
   --root-directory "Path=/ollama,CreationInfo={OwnerUid=0,OwnerGid=0,Permissions=755}" \
   --query 'AccessPointId' --output text)
 echo "Ollama Access Point: $OLLAMA_AP"
+
+#Powershell 
+aws efs create-access-point `
+  --file-system-id $FS_ID `
+  --posix-user Uid=0,Gid=0 `
+  --root-directory "Path=/ollama,CreationInfo={OwnerUid=0,OwnerGid=0,Permissions=755}" `
+  --query "AccessPointId" `
+  --output text
+
+aws efs create-access-point ^
+  --file-system-id %FS_ID% ^
+  --posix-user Uid=0,Gid=0 ^
+  --root-directory "Path=/ollama,CreationInfo={OwnerUid=0,OwnerGid=0,Permissions=755}" ^
+  --query "AccessPointId" ^
+  --output text
 ```
+
+
 
 > **Save `FS_ID`, `QDRANT_AP`, and `OLLAMA_AP`** — required for task definitions in Phase 12.
 
@@ -469,6 +578,18 @@ aws secretsmanager create-secret \
   --name doc-parser/openai-api-key \
   --secret-string '{"OPENAI_API_KEY":"sk-...YOUR-KEY-HERE..."}' \
   --region $AWS_REGION
+
+#Poershell Version
+aws secretsmanager create-secret `
+  --name doc-parser/openai-api-key `
+  --secret-string '{"OPENAI_API_KEY":"YOUR_ACTUAL_OPENAI_KEY"}' `
+  --region $AWS_REGION
+
+#CMD Version
+aws secretsmanager create-secret ^
+  --name doc-parser/openai-api-key ^
+  --secret-string "{\"OPENAI_API_KEY\":\"YOUR_ACTUAL_OPENAI_KEY\"}" ^
+  --region %AWS_REGION%
 ```
 
 To update the key later:
@@ -477,6 +598,16 @@ To update the key later:
 aws secretsmanager put-secret-value \
   --secret-id doc-parser/openai-api-key \
   --secret-string '{"OPENAI_API_KEY":"sk-...NEW-KEY..."}'
+
+#Powershell Version
+aws secretsmanager put-secret-value `
+  --secret-id doc-parser/openai-api-key `
+  --secret-string '{"OPENAI_API_KEY":"YOUR_NEW_KEY"}'
+
+#CMD Version
+aws secretsmanager put-secret-value ^
+  --secret-id doc-parser/openai-api-key ^
+  --secret-string "{\"OPENAI_API_KEY\":\"YOUR_NEW_KEY\"}"
 ```
 
 ---
@@ -549,6 +680,18 @@ aws iam put-user-policy \
   --user-name doc-parser-cicd \
   --policy-name doc-parser-cicd-policy \
   --policy-document file:///tmp/cicd-policy.json
+
+#Powershell Version
+aws iam put-user-policy `
+  --user-name doc-parser-cicd `
+  --policy-name doc-parser-cicd-policy `
+  --policy-document file://cicd-policy.json
+
+#CMD Version
+aws iam put-user-policy ^
+  --user-name doc-parser-cicd ^
+  --policy-name doc-parser-cicd-policy ^
+  --policy-document file://cicd-policy.json
 ```
 
 ---
@@ -571,9 +714,32 @@ aws iam create-role \
     }]
   }'
 
+#For Powershell and CMD, create a file on local with trust-polic to avoid messay code
+
+#Powershell Version
+aws iam create-role `
+  --role-name doc-parser-ecs-task-execution `
+  --assume-role-policy-document file://trust-policy.json
+
+#CMD Version
+aws iam create-role ^
+  --role-name doc-parser-ecs-task-execution ^
+  --assume-role-policy-document file://trust-policy.json
+
+
 # AWS-managed policy: ECR pull + CloudWatch logs
 aws iam attach-role-policy \
   --role-name doc-parser-ecs-task-execution \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+#Powershell Version
+aws iam attach-role-policy `
+  --role-name doc-parser-ecs-task-execution `
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+#CMD Version
+aws iam attach-role-policy ^
+  --role-name doc-parser-ecs-task-execution ^
   --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
 # Inline policy: read secrets from Secrets Manager
@@ -588,6 +754,31 @@ aws iam put-role-policy \
       \"Resource\": \"arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:doc-parser/*\"
     }]
   }"
+
+#For powershell and cmd, create file with secrets-manager-read.json, then paste follows
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:380610849617:secret:doc-parser/*"
+    }
+  ]
+}
+##Powershell Version
+aws iam put-role-policy `
+  --role-name doc-parser-ecs-task-execution `
+  --policy-name secrets-manager-read `
+  --policy-document file://secrets-manager-read.json
+
+aws iam put-role-policy ^
+  --role-name doc-parser-ecs-task-execution ^
+  --policy-name secrets-manager-read ^
+  --policy-document file://secrets-manager-read.json
+
 
 # Inline policy: mount EFS volumes
 aws iam put-role-policy \
@@ -606,6 +797,35 @@ aws iam put-role-policy \
     }]
   }"
 
+#For powershell and cmd, create file with efs-mount.json, then paste follows
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientWrite",
+        "elasticfilesystem:DescribeMountTargets"
+      ],
+      "Resource": "arn:aws:elasticfilesystem:us-east-1:380610849617:file-system/fs-07c043a931acaa4dc"
+    }
+  ]
+}
+
+#Powershell Version
+aws iam put-role-policy `
+  --role-name doc-parser-ecs-task-execution `
+  --policy-name efs-mount `
+  --policy-document file://efs-mount.json
+
+#CMD Version
+aws iam put-role-policy ^
+  --role-name doc-parser-ecs-task-execution ^
+  --policy-name efs-mount ^
+  --policy-document file://efs-mount.json
+
 # Inline policy: ECS Exec (lets you shell into a running container for debugging)
 aws iam put-role-policy \
   --role-name doc-parser-ecs-task-execution \
@@ -623,6 +843,30 @@ aws iam put-role-policy \
       "Resource": "*"
     }]
   }'
+
+#For powershell and cmd, create file with ecs-exec.json.json, then paste follows
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+
+aws iam put-role-policy `
+  --role-name doc-parser-ecs-task-execution `
+  --policy-name ecs-exec `
+  --policy-document file://ecs-exec.json
+
 
 export EXECUTION_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/doc-parser-ecs-task-execution"
 echo "Execution Role ARN: $EXECUTION_ROLE_ARN"
@@ -651,6 +895,16 @@ aws iam list-role-policies \
 aws logs create-log-group \
   --log-group-name /ecs/doc-parser-app \
   --region $AWS_REGION
+
+#Powershell Version
+aws logs create-log-group `
+  --log-group-name /ecs/doc-parser-app `
+  --region $AWS_REGION
+
+#CMD Version
+aws logs create-log-group ^
+  --log-group-name /ecs/doc-parser-app ^
+  --region %AWS_REGION%
 ```
 
 ---
@@ -815,6 +1069,18 @@ EOF
 aws ecs register-task-definition \
   --cli-input-json file:///tmp/app-task-def.json \
   --region $AWS_REGION
+
+
+#Powershell Version
+aws ecs register-task-definition `
+  --cli-input-json file://app-task-def.json `
+  --region $AWS_REGION
+
+#CMD Version
+aws ecs register-task-definition ^
+  --cli-input-json file://F:/sourab/multi-modal-rags/multi-modal-rag/app-task-def.json ^
+  --region us-east-1
+
 ```
 
 ---
@@ -832,6 +1098,27 @@ ALB_ARN=$(aws elbv2 create-load-balancer \
   --query 'LoadBalancers[0].LoadBalancerArn' --output text)
 echo "ALB ARN: $ALB_ARN"
 
+#Powershell Version
+aws elbv2 create-load-balancer `
+  --name doc-parser-alb `
+  --subnets $SUBNET1 $SUBNET2 `
+  --security-groups $ALB_SG `
+  --scheme internet-facing `
+  --type application `
+  --query "LoadBalancers[0].LoadBalancerArn" `
+  --output text
+
+#CMD Version
+aws elbv2 create-load-balancer ^
+  --name doc-parser-alb ^
+  --subnets subnet-029c1bef939dae7c8 subnet-0c0f44b0ec0c2803a ^
+  --security-groups sg-06040abf038a46e97 ^
+  --scheme internet-facing ^
+  --type application ^
+  --query "LoadBalancers[0].LoadBalancerArn" ^
+  --output text
+
+
 # Target group for FastAPI app (port 8000)
 APP_TG_ARN=$(aws elbv2 create-target-group \
   --name doc-parser-app-tg \
@@ -842,6 +1129,26 @@ APP_TG_ARN=$(aws elbv2 create-target-group \
   --health-check-path /health \
   --query 'TargetGroups[0].TargetGroupArn' --output text)
 echo "App TG: $APP_TG_ARN"
+
+$APP_TG_ARN = aws elbv2 create-target-group `
+  --name doc-parser-app-tg `
+  --protocol HTTP `
+  --port 8000 `
+  --target-type ip `
+  --vpc-id $VPC_ID `
+  --health-check-path /health `
+  --query "TargetGroups[0].TargetGroupArn" `
+  --output text
+
+aws elbv2 create-target-group ^
+  --name doc-parser-app-tg ^
+  --protocol HTTP ^
+  --port 8000 ^
+  --target-type ip ^
+  --vpc-id vpc-0827b4a3abafda4f7 ^
+  --health-check-path /health ^
+  --query "TargetGroups[0].TargetGroupArn" ^
+  --output text
 
 # Listener on port 80 — all traffic → FastAPI app
 LISTENER_ARN=$(aws elbv2 create-listener \
