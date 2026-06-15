@@ -681,6 +681,8 @@ aws iam put-user-policy \
   --policy-name doc-parser-cicd-policy \
   --policy-document file:///tmp/cicd-policy.json
 
+
+
 #Powershell Version
 aws iam put-user-policy `
   --user-name doc-parser-cicd `
