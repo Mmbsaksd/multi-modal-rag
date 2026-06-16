@@ -1402,6 +1402,42 @@ ECS retries automatically after the policy is attached — no redeployment neede
 
 ---
 
+### A.2 — Task fails to start: `ResourceInitializationError` on Secrets Manager
+
+**Symptom:** Similar to the above, the service is in a crash loop.
+
+**Diagnose:** The `describe-tasks` reason will be slightly different:
+```
+stopCode: TaskFailedToStart
+reason: ...unable to retrieve secret from asm... invalid character 'X' looking for beginning of object key string
+```
+
+**Cause:** This means the IAM permission is correct, but the secret itself is not formatted as valid JSON. The task definition expects a JSON object like `{"KEY":"VALUE"}` but the secret was stored as a plain string `VALUE`. ECS tries to parse `VALUE` as JSON, sees the first character (e.g., 's' from `sk-...`), and fails.
+
+**Fix:** Re-create the secret with the correct JSON structure.
+
+1.  **Verify the current (bad) value:**
+    ```bash
+    aws secretsmanager get-secret-value \
+      --secret-id doc-parser/openai-api-key \
+      --query SecretString --output text
+    # If this outputs just 'sk-...' without curly braces, it's wrong.
+    ```
+
+2.  **Overwrite it with the correct JSON format:**
+    ```bash
+    aws secretsmanager put-secret-value \
+      --secret-id doc-parser/openai-api-key \
+      --secret-string '{"OPENAI_API_KEY":"sk-...YOUR-KEY-HERE..."}'
+    ```
+
+3.  **Force a new deployment** to make ECS retry with the fixed secret:
+    ```bash
+    aws ecs update-service --cluster $CLUSTER_NAME --service doc-parser-app --force-new-deployment
+    ```
+
+---
+
 ### B — ALB health checks timing out: `Target.Timeout`
 
 **Symptom:** Task is RUNNING and app logs show uvicorn started on port 8000, but the ALB target stays `unhealthy — Target.Timeout`. No HTTP requests appear in the app logs at all.
