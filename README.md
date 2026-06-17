@@ -163,6 +163,16 @@ uv pip install -e ".[layout]"  # 🦙 PP-DocLayout-V3 local detection (Ollama mo
 
 ---
 
+## ☁️ AWS Deployment
+
+We provide complete, end-to-end AWS deployment guides tailored to your operating system. All guides have been consolidated into the `docs/deployment/` folder:
+
+- 🍎🐧 **Bash / Linux / macOS Deployment Guide**
+- 🪟 **Windows PowerShell Deployment Guide**
+- 🪟 **Windows CMD Deployment Guide**
+
+---
+
 ## 🖥️ CLI Reference
 
 ### `parse.py` — Parse PDFs into Markdown + JSON

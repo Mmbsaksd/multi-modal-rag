@@ -573,23 +573,38 @@ aws efs create-access-point ^
 
 Only `OPENAI_API_KEY` is needed. This project uses Ollama locally — no Z.AI API key required.
 
+**Bash / Linux / macOS:**
 ```bash
 aws secretsmanager create-secret \
   --name doc-parser/openai-api-key \
   --secret-string '{"OPENAI_API_KEY":"sk-...YOUR-KEY-HERE..."}' \
   --region $AWS_REGION
+```
 
-#Poershell Version
+**PowerShell (Windows):**
+*Note: PowerShell strips quotes from inline JSON, so we must use a temporary file to guarantee valid JSON formatting.*
+```powershell
+'{"OPENAI_API_KEY":"sk-YOUR-KEY-HERE"}' | Out-File secret.json -Encoding ascii
+
 aws secretsmanager create-secret `
   --name doc-parser/openai-api-key `
-  --secret-string '{"OPENAI_API_KEY":"YOUR_ACTUAL_OPENAI_KEY"}' `
+  --secret-string file://secret.json `
   --region $AWS_REGION
 
-#CMD Version
+Remove-Item secret.json
+```
+
+**CMD (Windows):**
+*Note: CMD can also struggle with escaping quotes, so using a temporary file is the safest method.*
+```cmd
+echo {"OPENAI_API_KEY":"sk-YOUR-KEY-HERE"} > secret.json
+
 aws secretsmanager create-secret ^
   --name doc-parser/openai-api-key ^
-  --secret-string "{\"OPENAI_API_KEY\":\"YOUR_ACTUAL_OPENAI_KEY\"}" ^
+  --secret-string file://secret.json ^
   --region %AWS_REGION%
+
+del secret.json
 ```
 
 To update the key later:
