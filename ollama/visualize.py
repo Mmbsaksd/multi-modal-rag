@@ -1,9 +1,3 @@
-"""Streamlit app: visualize Ollama/PP-DocLayoutV3 parsed results.
-
-Supports two workflows:
-  1. Load pre-saved results — pick any *_elements.json from ollama/output/
-  2. Parse on the fly    — upload a PDF, click Parse, wait ~30s, see results
-"""
 from __future__ import annotations
 
 import json
@@ -12,22 +6,21 @@ import time
 from collections import Counter
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import fitz
 import streamlit as st
 from PIL import Image, ImageDraw
 
-# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Ollama Document Visualizer",
     page_icon="🦙",
     layout="wide",
 )
-
-# ── Constants ─────────────────────────────────────────────────────────────────
 RENDER_DPI = 150
 BBOX_SCALE = 1000
-_CONFIG = Path(__file__).parent / "config.yaml"
-OUTPUT_DIR = Path(__file__).parent / "output"
+
+_CONFIG = Path(__file__).parent/"config.yaml"
+OUTPUT_DIR = Path(__file__).parent/("output")
+
 
 LABEL_COLORS: dict[str, tuple[int, int, int]] = {
     # Shared with cloud app
@@ -56,55 +49,53 @@ LABEL_COLORS: dict[str, tuple[int, int, int]] = {
     "footer":            (160, 160, 160),   # light gray
     "page_number":       (120, 120, 120),   # gray
 }
-DEFAULT_COLOR = (180, 180, 0)  # fallback yellow for unknown labels
+DEFAULT_COLOR = (180, 180, 0)
 
+def get_colour(label: Path, page_num: int):
+    return LABEL_COLORS.get(label,DEFAULT_COLOR)
 
-def get_color(label: str) -> tuple[int, int, int]:
-    return LABEL_COLORS.get(label, DEFAULT_COLOR)
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def render_page(pdf_path: Path, page_num: int) -> Image.Image:
-    """Render a PDF page as a PIL Image at RENDER_DPI."""
+#Helpers
+def render_page(pdf_path, page_num: int)-> Image.Image:
     doc = fitz.open(str(pdf_path))
     try:
         page = doc.load_page(page_num)
-        mat = fitz.Matrix(RENDER_DPI / 72, RENDER_DPI / 72)
+        mat = fitz.Matrix(RENDER_DPI/72, RENDER_DPI/72)
         pix = page.get_pixmap(matrix=mat)
-        return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        return Image.frombytes("RGB",[pix.width, pix.height], pix.samples)
+
     finally:
         doc.close()
 
 
-def draw_bboxes(img: Image.Image, elements: list[dict]) -> Image.Image:
-    """Draw colored bounding boxes onto the page image."""
+def draw_bboxes(img: Image.Image, elements: list[dict])-> Image.Image:
     img = img.copy()
     draw = ImageDraw.Draw(img, "RGBA")
+
     w, h = img.size
 
     for el in elements:
         bbox = el.get("bbox_2d")
-        if not bbox or len(bbox) != 4:
-            continue
 
+        if not bbox or len(bbox) !=4:
+            continue
+        
         label = el.get("label", "unknown")
-        color = get_color(label)
+        color = get_colour(label)
+
         x1 = int(bbox[0] * w / BBOX_SCALE)
         y1 = int(bbox[1] * h / BBOX_SCALE)
         x2 = int(bbox[2] * w / BBOX_SCALE)
         y2 = int(bbox[3] * h / BBOX_SCALE)
 
-        if x2 <= x1 or y2 <= y1:
+        if x2 <=x1 or y2 <=y1:
             continue
 
         draw.rectangle([x1, y1, x2, y2], fill=(*color, 35), outline=(*color, 220), width=2)
 
-        badge_text = label.replace("_", " ")
-        tx, ty = x1 + 3, max(y1 - 18, 0)
-        draw.rectangle([tx - 2, ty - 1, tx + len(badge_text) * 7 + 2, ty + 14],
-                       fill=(*color, 200))
-        draw.text((tx, ty), badge_text, fill=(255, 255, 255))
+        badge_text = label.replace("_"," ")
+        tx, ty = x1 + 3, max(y1-18, 0)
+        draw.rectangle([tx-2, ty-1, tx + len(badge_text) * 7 + 2, ty+14], fill=(*color, 200))
+        draw.text((tx,ty), badge_text, fill=(255,255, 255))
 
     return img
 
@@ -121,19 +112,19 @@ def draw_polygons(img: Image.Image, elements: list[dict]) -> Image.Image:
             continue
 
         label = el.get("label", "unknown")
-        color = get_color(label)
+        color = get_colour(label)
+
         pts = [(int(p[0] * w / BBOX_SCALE), int(p[1] * h / BBOX_SCALE)) for p in polygon]
         draw.polygon(pts, fill=(*color, 50), outline=(*color, 240))
 
     return img
-
 
 def build_legend(labels_present: set[str]) -> None:
     """Render a color legend for the element types found on this page."""
     st.markdown("**Legend**")
     cols = st.columns(4)
     for i, label in enumerate(sorted(labels_present)):
-        r, g, b = get_color(label)
+        r, g, b = get_colour(label)
         hex_color = f"#{r:02x}{g:02x}{b:02x}"
         cols[i % 4].markdown(
             f'<span style="background:{hex_color};padding:2px 8px;'
@@ -142,16 +133,12 @@ def build_legend(labels_present: set[str]) -> None:
             unsafe_allow_html=True,
         )
 
-
-# ── Data loading ──────────────────────────────────────────────────────────────
-
 def load_result(json_path: Path) -> tuple[list[list[dict]], str]:
     """Load elements JSON + paired markdown. Returns (pages, markdown_text)."""
     pages: list[list[dict]] = json.loads(json_path.read_text())
     md_path = json_path.parent / (json_path.stem.replace("_elements", "") + ".md")
     md = md_path.read_text() if md_path.exists() else ""
     return pages, md
-
 
 def find_pdf(stem: str) -> Path | None:
     """Look for stem.pdf in data/raw/ relative to project root."""
@@ -160,22 +147,20 @@ def find_pdf(stem: str) -> Path | None:
     return candidate if candidate.exists() else None
 
 
-def run_parser(pdf_path: Path) -> tuple[list[list[dict]], str]:
-    """Parse a PDF with the local Ollama pipeline and return (pages, markdown)."""
+def run_parser(pdf_path: Path)-> tuple[list[list[dict]], str]:
     try:
-        from glmocr import GlmOcr  # type: ignore[import]
+        from glmocr import GlmOcr
     except ImportError as e:
         raise ImportError(
             "glmocr not installed. Run: uv pip install -e '.[layout]'"
         ) from e
-
     parser = GlmOcr(config_path=str(_CONFIG))
-    result = parser.parse(str(pdf_path), save_layout_visualization=False)
+    result = parser.parse(str(pdf_path), save_layout_visualization=True)
 
     pages: list[list[dict]] = result.json_result if isinstance(result.json_result, list) else []
     md: str = result.markdown_result or ""
-    return pages, md
 
+    return pages, md
 
 def save_result(stem: str, pages: list[list[dict]], md: str) -> Path:
     """Persist parsed results to ollama/output/ and return the JSON path."""
@@ -185,6 +170,7 @@ def save_result(stem: str, pages: list[list[dict]], md: str) -> Path:
     if md:
         (OUTPUT_DIR / f"{stem}.md").write_text(md, encoding="utf-8")
     return json_path
+
 
 
 # ── Session state ─────────────────────────────────────────────────────────────
